@@ -1,0 +1,8 @@
+-c python-lock.txt
+pydantic-ai-slim[openai,ag-ui]==2.54.0
+ag-ui-protocol==0.1.22
+pydantic-ai-harness[coder,skills,e2b]==0.54.0
+e2b==2.48.0
+uvicorn==0.54.0
+starlette==1.8.0
+httpx==0.28.1

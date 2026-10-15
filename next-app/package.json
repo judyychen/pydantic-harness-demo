@@ -1,0 +1,16 @@
+{
+  "name": "pydantic-next-spike-app",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22 <23" },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "next build",
+    "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}

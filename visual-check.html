@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三份视觉方向 · 材料回看</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f5;color:#1e342b;font:15px/1.6 system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:32px}h1{font-size:28px;margin:0}header p{margin:8px 0;color:#5f7068}.note{padding:12px 16px;background:#e8eee9;border-radius:12px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.card{background:white;border:1px solid #d8e0db;border-radius:16px;padding:18px}.card h2{margin:0;font-size:21px}.card p{min-height:48px;color:#5f7068}.card iframe{width:100%;height:430px;border:1px solid #e2e7e3;background:#fafbf9}.card img{width:100%;display:block;border:1px solid #e2e7e3;margin-top:12px}.actions{display:flex;gap:12px;align-items:center;margin-top:16px}button{border:0;border-radius:8px;padding:10px 18px;background:#264b3a;color:white;font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,textarea:focus-visible{outline:3px solid #c49148;outline-offset:3px}button[aria-pressed=true]{background:#8a5830}a{color:#315e47}textarea{width:100%;max-width:720px;min-height:76px;padding:12px;font:inherit;border:1px solid #bdcbc2;border-radius:8px}.history{margin-top:28px;padding:20px;background:white;border:1px solid #d8e0db;border-radius:12px}#message{min-height:24px;color:#774a22}.meta{font-size:12px;color:#66766c}@media(max-width:950px){.grid{grid-template-columns:1fr}.card iframe{height:500px}main{padding:20px}}
+</style>
+<main>
+<header><h1>比较三份视觉方向</h1><p>选择和候选都会保留，刷新后仍可回看。这里的选择不会自动改动应用。</p></header>
+<div class="note" id="scope" role="status">正在读取材料…</div>
+<div class="grid" id="cards"></div>
+<section class="history"><label for="custom"><strong>也可以组合喜欢的部分</strong></label><p>例如：“用 A 的布局，加上 B 的配色。”输入后点击作为参考的候选，保存这段回答。</p><textarea id="custom" maxlength="1000" placeholder="可选：写下自己的组合或调整"></textarea><p id="message" role="status" aria-live="polite"></p><h2>选择记录</h2><ol id="history"></ol><p class="meta" id="binding"></p></section>
+</main>
+<script>
+let latest;
+const el=id=>document.getElementById(id);
+async function json(url,options){const response=await fetch(url,options);if(!response.ok)throw Error('材料或存储暂时不可用');return response.json()}
+async function load(){
+  latest=await json('/api/manifest'+location.search);
+  el('scope').textContent=latest.candidates.flatMap(c=>[c.html,c.image]).filter(Boolean).every(a=>a.persistence==='tos-readback-confirmed')?'材料已确认远端读回；访问由宿主代理。':'当前包含本机 SQLite 材料，尚未完成全部材料的 TOS 验证。';
+  el('binding').textContent=latest.bound_to_model?'已关联原追问；选择结果保留，尚未发送给 Agent。':'独立材料比较，尚未绑定实际 Agent 追问。';
+  el('cards').replaceChildren();
+  for(const item of latest.candidates){
+    const card=document.createElement('section');card.className='card';
+    const title=document.createElement('h2');title.textContent=item.id+' · '+item.label;
+    const desc=document.createElement('p');desc.textContent=item.description;
+    const frame=document.createElement('iframe');frame.src=item.html.url;frame.title=item.label+' 页面样例';frame.setAttribute('sandbox','');
+    card.append(title,desc,frame);
+    if(item.image){const image=document.createElement('img');image.src=item.image.url;image.alt=item.label+' 已保存截图';card.append(image)}
+    const actions=document.createElement('div');actions.className='actions';
+    const button=document.createElement('button');button.type='button';button.textContent='选择 '+item.id;button.setAttribute('aria-pressed',String(latest.choices.at(-1)?.candidate_id===item.id));button.onclick=()=>choose(item.id,button);
+    const link=document.createElement('a');link.href=item.html.url;link.target='_blank';link.rel='noopener';link.textContent='查看完整页面';actions.append(button,link);card.append(actions);el('cards').append(card);
+  }
+  el('history').replaceChildren(...latest.choices.map(choice=>{const row=document.createElement('li');row.textContent=new Date(choice.at).toLocaleString()+' · '+choice.answer_text;return row}));
+}
+async function choose(id,button){
+  button.disabled=true;
+  try{await json('/api/choose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({set_id:latest.id,candidate_id:id,custom_answer:el('custom').value})});el('custom').value='';el('message').textContent='选择已保存，三份候选仍可回看。';await load()}
+  catch(error){el('message').textContent=error.message;button.disabled=false}
+}
+load().catch(error=>el('scope').textContent=error.message);
+</script>
+</html>
